@@ -7,12 +7,6 @@
 
 import Foundation
 
-struct ContactItem {
-    var name: String
-    var phone: String
-    var mobileOperator: MobileOperator
-}
-
 enum MobileOperator {
     case zetMobile
     case tcell

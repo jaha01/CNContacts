@@ -7,14 +7,10 @@
 
 import UIKit
 
-protocol ContactsAddViewControllerProtocol: AnyObject {
-    func refreshTableView()
-}
 
-final class ContactsAddViewController: UIViewController, ContactsAddViewControllerProtocol {
+final class ContactsAddViewController: UIViewController {
 
-    weak var delegate: ContactsTableRefreshProtocol?
-    var presenter: ContactsAddPresenterProtocol!
+    weak var delegate: ContactsViewController!
     
     // MARK: - Private properties
     
@@ -44,6 +40,8 @@ final class ContactsAddViewController: UIViewController, ContactsAddViewControll
         textfield.translatesAutoresizingMaskIntoConstraints = false
         return textfield
     }()
+    
+    // MARK: - Public methods
     
     init(delegate: ContactsViewController){
         super.init(nibName: nil, bundle: nil)
@@ -92,29 +90,16 @@ final class ContactsAddViewController: UIViewController, ContactsAddViewControll
     }
     
     @objc private func didTapDone(mySwitch: UISwitch) {
-//        let store = CNContactStore()
-//        let contact = CNMutableContact()
-//
-//        contact.givenName = name.text ?? ""
-//        contact.familyName = surname.text ?? ""
-//        contact.phoneNumbers.append(CNLabeledValue(
-//            label: "mobile", value: CNPhoneNumber(stringValue: phone.text ?? "")))
-//
-//        let saveRequest = CNSaveRequest()
-//        saveRequest.add(contact, toContainerWithIdentifier: nil)
-//        try? store.execute(saveRequest)
-        presenter.addContact(name: name.text ?? "", surname: surname.text ?? "", phone: phone.text ?? "")
-        didTapCancel()
+        delegate.addContact(surname: surname.text ?? "", name: name.text ?? "", phone: phone.text ?? "")
+        close()
     }
 
     @objc private func didTapCancel() {
-        self.dismiss(animated: true, completion: nil)
+        close()
     }
-
-    // MARK: - Public methods
     
-    func refreshTableView() {
-        delegate?.refreshTable()
+    private func close() {
+        self.dismiss(animated: true, completion: nil)
     }
     
 }

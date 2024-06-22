@@ -9,11 +9,16 @@ import UIKit
 
 final class ContactsFilterViewController: UIViewController {
 
+    var delegate: ContactsViewController!
+    
     // MARK: - Private properties
+    
+    private var operatorFilter = [MobileOperator]()
     
     private let zetSwitch: UISwitch = {
        let mySwitch = UISwitch()
         mySwitch.onTintColor = .systemYellow
+        mySwitch.isOn = true
         mySwitch.translatesAutoresizingMaskIntoConstraints = false
         return mySwitch
     }()
@@ -21,6 +26,7 @@ final class ContactsFilterViewController: UIViewController {
     private let megafoneSwitch: UISwitch = {
        let mySwitch = UISwitch()
         mySwitch.onTintColor = .systemGreen
+        mySwitch.isOn = true
         mySwitch.translatesAutoresizingMaskIntoConstraints = false
         return mySwitch
     }()
@@ -28,6 +34,7 @@ final class ContactsFilterViewController: UIViewController {
     private let babilonSwitch: UISwitch = {
        let mySwitch = UISwitch()
         mySwitch.onTintColor = .systemBlue
+        mySwitch.isOn = true
         mySwitch.translatesAutoresizingMaskIntoConstraints = false
         return mySwitch
     }()
@@ -35,6 +42,7 @@ final class ContactsFilterViewController: UIViewController {
     private let tcellSwitch: UISwitch = {
        let mySwitch = UISwitch()
         mySwitch.onTintColor = .systemPurple
+        mySwitch.isOn = true
         mySwitch.translatesAutoresizingMaskIntoConstraints = false
         return mySwitch
     }()
@@ -42,6 +50,7 @@ final class ContactsFilterViewController: UIViewController {
     private let allSwitch: UISwitch = {
        let mySwitch = UISwitch()
         mySwitch.onTintColor = .systemGray
+        mySwitch.isOn = true
         mySwitch.translatesAutoresizingMaskIntoConstraints = false
         mySwitch.addTarget(self, action: #selector(allSwitchDidChanged), for: UIControl.Event.valueChanged)
         return mySwitch
@@ -82,6 +91,7 @@ final class ContactsFilterViewController: UIViewController {
         return label
     }()
     
+    // MARK: - Public methods
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -89,6 +99,15 @@ final class ContactsFilterViewController: UIViewController {
         view.backgroundColor = .systemBackground
         setupUI()
         
+    }
+    
+    init(delegate: ContactsViewController){
+        super.init(nibName: nil, bundle: nil)
+        self.delegate = delegate
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
     
     // MARK: - Private methods
@@ -147,8 +166,8 @@ final class ContactsFilterViewController: UIViewController {
         ])
     }
     
-    @objc private func allSwitchDidChanged(mySwitch: UISwitch) {
-        if mySwitch.isOn {
+    @objc private func allSwitchDidChanged(sender: UISwitch) {
+        if sender.isOn {
             megafoneSwitch.isOn = true
             babilonSwitch.isOn = true
             tcellSwitch.isOn = true
@@ -161,12 +180,28 @@ final class ContactsFilterViewController: UIViewController {
         }
     }
     
-    @objc private func didTapDone(mySwitch: UISwitch) {
-        
+    @objc private func didTapDone(sender: UISwitch) {
+        if megafoneSwitch.isOn {
+            operatorFilter.append(MobileOperator.megafone)
+        }
+        if babilonSwitch.isOn {
+            operatorFilter.append(MobileOperator.babilon)
+        }
+        if zetSwitch.isOn {
+            operatorFilter.append(MobileOperator.zetMobile)
+        }
+        if tcellSwitch.isOn {
+            operatorFilter.append(MobileOperator.tcell)
+        }
+        delegate.setFilter(filter: operatorFilter)
+        close()
     }
 
-    @objc private func didTapCancel(mySwitch: UISwitch) {
+    @objc private func didTapCancel(sender: UISwitch) {
+        close()
+    }
+
+    private func close() {
         self.dismiss(animated: true, completion: nil)
     }
-
 }

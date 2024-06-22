@@ -11,8 +11,9 @@ import Contacts
 protocol ContactsPresenterProtocol: AnyObject {
     func onLoad()
     func applyFilters()
-//    func addContact()
+    func addContact(surname: String, name: String, phone: String)
     func deleteContact()
+    func setFilter(filter: [MobileOperator])
 }
 
 final class ContactsPresenter: ContactsPresenterProtocol {
@@ -23,6 +24,7 @@ final class ContactsPresenter: ContactsPresenterProtocol {
     
     private var contactStore = CNContactStore()
     private var contacts = [ContactItem]()
+    private var operatorFilter = [MobileOperator.tcell, MobileOperator.zetMobile, MobileOperator.megafone, MobileOperator.babilon]
     
     
     // MARK: - Public methods
@@ -34,9 +36,9 @@ final class ContactsPresenter: ContactsPresenterProtocol {
                 self.loadContacts()
             } else if error != nil {
                 self.view.showEmptyView(message: "Access denied")
-                return
             }
         }
+        return
     }
     
     
@@ -44,22 +46,56 @@ final class ContactsPresenter: ContactsPresenterProtocol {
         
     }
     
-//    func addContact() {
-//        let store = CNContactStore()
-//        let contact = CNMutableContact()
-//
-//        contact.givenName = name
-//        contact.familyName = surname
-//        contact.phoneNumbers.append(CNLabeledValue(
-//            label: "mobile", value: CNPhoneNumber(stringValue: phone)))
-//
-//        let saveRequest = CNSaveRequest()
-//        saveRequest.add(contact, toContainerWithIdentifier: nil)
-//        try? store.execute(saveRequest)
-//    }
+    func addContact(surname: String, name: String, phone: String) {
+        let store = CNContactStore()
+        let contact = CNMutableContact()
+
+        contact.givenName = name
+        contact.familyName = surname
+        contact.phoneNumbers.append(CNLabeledValue(
+            label: "mobile", value: CNPhoneNumber(stringValue: phone)))
+
+        let saveRequest = CNSaveRequest()
+        saveRequest.add(contact, toContainerWithIdentifier: nil)
+        try? store.execute(saveRequest)
+        
+        loadContacts()
+    }
     
     func deleteContact() {
-        
+        let predicate = CNContact.predicateForContacts(matchingName: "John")
+        let toFetch = [CNContactEmailAddressesKey]
+
+        do{
+          let contacts = try store.unifiedContactsMatchingPredicate(predicate,keysToFetch: toFetch)
+          guard contacts.count > 0 else{
+            print("No contacts found")
+            return
+          }
+
+          guard let contact = contacts.first else{
+
+        return
+          }
+
+          let req = CNSaveRequest()
+          let mutableContact = contact.mutableCopy() as! CNMutableContact
+          req.deleteContact(mutableContact)
+
+          do{
+            try store.executeSaveRequest(req)
+            print("Success, You deleted the user")
+          } catch let e{
+            print("Error = \(e)")
+          }
+        } catch let err{
+           print(err)
+        }
+    }
+    
+    func setFilter(filter: [MobileOperator]) {
+        operatorFilter = filter
+        loadContacts()
     }
     
     // MARK: - Private methods
@@ -71,10 +107,12 @@ final class ContactsPresenter: ContactsPresenterProtocol {
             let request = CNContactFetchRequest(keysToFetch: keyToFetch)
             try contactStore.enumerateContacts(with: request, usingBlock: { cnContact, error in
                 if cnContact.isKeyAvailable(CNContactPhoneNumbersKey) {
-                    let name = CNContactFormatter.string(from: cnContact, style: .fullName)!
-                    let phone = (cnContact.phoneNumbers[0].value as! CNPhoneNumber).value(forKey: "digits") as! String
-                    let operatr = self.getOperator(phone: phone)
-                    self.contacts.append(ContactItem(name: name, phone: phone, mobileOperator: operatr))
+                    let name = CNContactFormatter.string(from: cnContact, style: .fullName) ?? ""
+                    let phone = (cnContact.phoneNumbers[0].value).value(forKey: "digits") as? String ?? ""
+                    let mobileOperator = self.getOperator(phone: phone)
+                    if self.operatorFilter.contains(mobileOperator) {
+                        self.contacts.append(ContactItem(name: name, phone: phone, mobileOperator: mobileOperator))
+                    }
                 }
             })
             view.showContactsList(contacts: contacts)
@@ -85,13 +123,14 @@ final class ContactsPresenter: ContactsPresenterProtocol {
     }
     
     private func getOperator(phone: String) -> MobileOperator {
-        if phone.prefix(2) == "50" || phone.prefix(2) == "93"  {
+        let phonePrefix = phone.prefix(2)
+        if phonePrefix == "50" || phonePrefix == "93"  {
             return MobileOperator.tcell
-        } else if phone.prefix(2) == "91"  {
+        } else if phonePrefix == "91"  {
             return MobileOperator.zetMobile
-        } else if phone.prefix(3) == "918" || phone.prefix(2) == "98"  {
+        } else if phone.prefix(3) == "918" || phonePrefix == "98"  {
             return MobileOperator.babilon
-        } else if phone.prefix(2) == "55" || phone.prefix(2) == "90"  {
+        } else if phonePrefix == "55" || phonePrefix == "90"  {
             return MobileOperator.megafone
         }
         return MobileOperator.unknown

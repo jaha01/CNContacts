@@ -11,15 +11,13 @@ import Contacts
 protocol ContactsViewControllerProtocol: AnyObject {
  func showContactsList(contacts: [ContactItem])
  func showEmptyView(message: String)
+ func addContact(surname: String, name: String, phone: String)
 }
 
-protocol ContactsTableRefreshProtocol: AnyObject {
-    func refreshTable()
-}
-
-final class ContactsViewController: UIViewController, ContactsViewControllerProtocol, ContactsTableRefreshProtocol {
+final class ContactsViewController: UIViewController, ContactsViewControllerProtocol {
 
     var presenter: ContactsPresenterProtocol!
+    
     
     // MARK: - Private properties
     
@@ -47,7 +45,7 @@ final class ContactsViewController: UIViewController, ContactsViewControllerProt
         contactsList.delegate = self
         contactsList.dataSource = self
         setupUI()
-        refreshTable()
+        presenter.onLoad()
     }
     
     func showContactsList(contacts: [ContactItem]) {
@@ -70,8 +68,12 @@ final class ContactsViewController: UIViewController, ContactsViewControllerProt
         }
     }
 
-    func refreshTable() {
-        presenter.onLoad()
+    func addContact(surname: String, name: String, phone: String) {
+        presenter.addContact(surname: surname, name: name, phone: phone)
+    }
+    
+    func setFilter(filter: [MobileOperator]) {
+        presenter.setFilter(filter: filter)
     }
     
     // MARK: - Private methods
@@ -86,26 +88,15 @@ final class ContactsViewController: UIViewController, ContactsViewControllerProt
     }
     
     @objc private func didTapAdd() {
-        let contactAddController = ContactsAddViewController(delegate: self)
-        let contactAddPresenter = ContactsAddPresenter()
-        
-        contactAddPresenter.view = contactAddController
-        contactAddController.presenter = contactAddPresenter
-        
-        let nav = UINavigationController(rootViewController: contactAddController)
-        nav.navigationBar.backgroundColor = .white
-        if let sheet = nav.sheetPresentationController {
-            sheet.detents = [.medium()]
-            sheet.preferredCornerRadius = 25
-            sheet.prefersScrollingExpandsWhenScrolledToEdge = false
-            sheet.prefersGrabberVisible = true
-        }
-        self.present(nav, animated: true, completion: nil)
+        buildBottomSheet(for: ContactsAddViewController(delegate: self))
     }
 
     @objc private func didTapFilter() {
-        let filterVC = ContactsFilterViewController()
-        let nav = UINavigationController(rootViewController: filterVC)
+        buildBottomSheet(for: ContactsFilterViewController(delegate: self))
+    }
+    
+    private func buildBottomSheet(for controller: UIViewController) {
+        let nav = UINavigationController(rootViewController: controller)
         nav.navigationBar.backgroundColor = .white
         if let sheet = nav.sheetPresentationController {
             sheet.detents = [.medium()]
