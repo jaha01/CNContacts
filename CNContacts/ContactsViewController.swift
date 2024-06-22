@@ -9,28 +9,31 @@ import UIKit
 import Contacts
 
 protocol ContactsViewControllerProtocol: AnyObject {
- func showContactsList(contacts: [CNContact])
+ func showContactsList(contacts: [ContactItem])
  func showEmptyView(message: String)
 }
 
-final class ContactsViewController: UIViewController, ContactsViewControllerProtocol {
+protocol ContactsTableRefreshProtocol: AnyObject {
+    func refreshTable()
+}
+
+final class ContactsViewController: UIViewController, ContactsViewControllerProtocol, ContactsTableRefreshProtocol {
 
     var presenter: ContactsPresenterProtocol!
     
     // MARK: - Private properties
     
-    private var contacts = [CNContact]()
+    private var contacts = [ContactItem]()
     
     private let contactsList: UITableView = {
         let table = UITableView()
-        table.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
+        table.register(ContactsTableViewCell.self, forCellReuseIdentifier: ContactsTableViewCell.identifier)
         table.translatesAutoresizingMaskIntoConstraints = false
         return table
     }()
     
     private let errorLabel: UILabel = {
         let label = UILabel()
-        label.text = "1234567890"
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -41,21 +44,13 @@ final class ContactsViewController: UIViewController, ContactsViewControllerProt
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
         title = "Список контактов"
-        view.addSubview(contactsList)
-        view.addSubview(errorLabel)
-        contactsList.isHidden = true
-        errorLabel.isHidden = true
         contactsList.delegate = self
         contactsList.dataSource = self
-        
-        navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(didTapAdd))
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "slider.horizontal.3") , style: UIBarButtonItem.Style.plain, target: self, action: #selector(didFilterTap))
-
-        presenter.onLoad()
-        setConstraints()
+        setupUI()
+        refreshTable()
     }
     
-    func showContactsList(contacts: [CNContact]) {
+    func showContactsList(contacts: [ContactItem]) {
         self.contacts = contacts
         DispatchQueue.main.async { [weak self] in
             guard let self = self else {return}
@@ -75,14 +70,50 @@ final class ContactsViewController: UIViewController, ContactsViewControllerProt
         }
     }
 
+    func refreshTable() {
+        presenter.onLoad()
+    }
+    
     // MARK: - Private methods
+    private func setupUI() {
+        view.addSubview(contactsList)
+        view.addSubview(errorLabel)
+        contactsList.isHidden = true
+        errorLabel.isHidden = true
+        navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(didTapAdd))
+        navigationItem.leftBarButtonItem = UIBarButtonItem(image: UIImage(systemName: "slider.horizontal.3") , style: UIBarButtonItem.Style.plain, target: self, action: #selector(didTapFilter))
+        setConstraints()
+    }
     
     @objc private func didTapAdd() {
-
+        let contactAddController = ContactsAddViewController(delegate: self)
+        let contactAddPresenter = ContactsAddPresenter()
+        
+        contactAddPresenter.view = contactAddController
+        contactAddController.presenter = contactAddPresenter
+        
+        let nav = UINavigationController(rootViewController: contactAddController)
+        nav.navigationBar.backgroundColor = .white
+        if let sheet = nav.sheetPresentationController {
+            sheet.detents = [.medium()]
+            sheet.preferredCornerRadius = 25
+            sheet.prefersScrollingExpandsWhenScrolledToEdge = false
+            sheet.prefersGrabberVisible = true
+        }
+        self.present(nav, animated: true, completion: nil)
     }
 
-    @objc private func didFilterTap() {
-
+    @objc private func didTapFilter() {
+        let filterVC = ContactsFilterViewController()
+        let nav = UINavigationController(rootViewController: filterVC)
+        nav.navigationBar.backgroundColor = .white
+        if let sheet = nav.sheetPresentationController {
+            sheet.detents = [.medium()]
+            sheet.preferredCornerRadius = 25
+            sheet.prefersScrollingExpandsWhenScrolledToEdge = false
+            sheet.prefersGrabberVisible = true
+        }
+        self.present(nav, animated: true, completion: nil)
     }
     
     private func setConstraints() {
@@ -108,20 +139,19 @@ extension ContactsViewController: UITableViewDelegate, UITableViewDataSource {
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
-//        cell.textLabel?.text = "test"
-        let contact = contacts[indexPath.row]
-        if contact.areKeysAvailable([CNContactFormatter.descriptorForRequiredKeys(for: .fullName)]) {
-            cell.textLabel?.text = CNContactFormatter.string(from: contact, style: .fullName)
-        }
+        let cell = tableView.dequeueReusableCell(withIdentifier: ContactsTableViewCell.identifier, for: indexPath) as! ContactsTableViewCell
+        cell.configure(contact: contacts[indexPath.row])
         return cell
     }
     
-//    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
-//        if editingStyle == .delete {
-//            interactor.deleteItem(id: self.items[indexPath.row].id)
-//            self.items.remove(at: indexPath.row)
-//            tableView.deleteRows(at: [indexPath], with: .fade)
-//        }
-//    }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 50
+    }
+    
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+            presenter.deleteContact()
+            
+        }
+    }
 }
