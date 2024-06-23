@@ -7,7 +7,7 @@
 
 import UIKit
 
-class ContactsTableViewCell: UITableViewCell {
+final class ContactsTableViewCell: UITableViewCell {
 
     static let identifier = "ContactsTableViewCell"
     
@@ -28,7 +28,13 @@ class ContactsTableViewCell: UITableViewCell {
         return label
     }()
     
-    // MARK: - Public properties
+    // MARK: - Init
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    // MARK: - Public methods
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?){
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -38,17 +44,6 @@ class ContactsTableViewCell: UITableViewCell {
         setupUI()
 
     }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-//    override func layoutSubviews() {
-//        super.layoutSubviews()
-//
-//        name.frame = CGRect(x: 5, y: 0, width: contentView.frame.size.width, height: 2*contentView.frame.size.height/3)
-//        phone.frame = CGRect(x: 15, y: name.frame.height - 5, width: contentView.frame.size.width, height: contentView.frame.size.height/3)
-//    }
     
     func configure(contact: ContactItem) {
         name.text = contact.name
@@ -82,5 +77,4 @@ class ContactsTableViewCell: UITableViewCell {
             phone.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4),
         ])
     }
-
 }

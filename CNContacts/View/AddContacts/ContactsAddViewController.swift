@@ -10,7 +10,7 @@ import UIKit
 
 final class ContactsAddViewController: UIViewController {
 
-    weak var delegate: ContactsViewController!
+    weak var delegate: ContactsViewController?
     
     // MARK: - Private properties
     
@@ -41,7 +41,7 @@ final class ContactsAddViewController: UIViewController {
         return textfield
     }()
     
-    // MARK: - Public methods
+    // MARK: - Init
     
     init(delegate: ContactsViewController){
         super.init(nibName: nil, bundle: nil)
@@ -52,12 +52,13 @@ final class ContactsAddViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
+    // MARK: - Public methods
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Добавить Контакт"
         view.backgroundColor = .systemBackground
         setupUI()
-        
     }
     
     // MARK: - Private methods
@@ -70,7 +71,6 @@ final class ContactsAddViewController: UIViewController {
         navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .cancel, target: self, action: #selector(didTapCancel))
         
         NSLayoutConstraint.activate([
-            
             surname.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             surname.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12),
             surname.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12),
@@ -85,12 +85,11 @@ final class ContactsAddViewController: UIViewController {
             phone.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12),
             phone.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12),
             phone.bottomAnchor.constraint(equalTo: phone.topAnchor, constant: 40),
-            
             ])
     }
     
-    @objc private func didTapDone(mySwitch: UISwitch) {
-        delegate.addContact(surname: surname.text ?? "", name: name.text ?? "", phone: phone.text ?? "")
+    @objc private func didTapDone() {
+        delegate?.addContact(surname: surname.text ?? "", name: name.text ?? "", phone: phone.text ?? "")
         close()
     }
 
@@ -101,5 +100,4 @@ final class ContactsAddViewController: UIViewController {
     private func close() {
         self.dismiss(animated: true, completion: nil)
     }
-    
 }

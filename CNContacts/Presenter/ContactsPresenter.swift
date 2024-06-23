@@ -10,10 +10,10 @@ import Contacts
 
 protocol ContactsPresenterProtocol: AnyObject {
     func onLoad()
-    func applyFilters()
     func addContact(surname: String, name: String, phone: String)
-    func deleteContact()
-    func setFilter(filter: [MobileOperator])
+    func deleteContact(phone: String)
+    func setFilter(filter: Set<OperatorFilter>)
+    func getFilters() -> Set<OperatorFilter>
 }
 
 final class ContactsPresenter: ContactsPresenterProtocol {
@@ -22,9 +22,9 @@ final class ContactsPresenter: ContactsPresenterProtocol {
     
     // MARK: Private properties
     
-    private var contactStore = CNContactStore()
+    private let contactStore = CNContactStore()
     private var contacts = [ContactItem]()
-    private var operatorFilter = [MobileOperator.tcell, MobileOperator.zetMobile, MobileOperator.megafone, MobileOperator.babilon]
+    private var operatorFilters: Set<OperatorFilter> = [.all]
     
     
     // MARK: - Public methods
@@ -41,61 +41,59 @@ final class ContactsPresenter: ContactsPresenterProtocol {
         return
     }
     
-    
-    func applyFilters() {
-        
-    }
-    
     func addContact(surname: String, name: String, phone: String) {
-        let store = CNContactStore()
         let contact = CNMutableContact()
-
+        
         contact.givenName = name
         contact.familyName = surname
         contact.phoneNumbers.append(CNLabeledValue(
             label: "mobile", value: CNPhoneNumber(stringValue: phone)))
-
+        
         let saveRequest = CNSaveRequest()
         saveRequest.add(contact, toContainerWithIdentifier: nil)
-        try? store.execute(saveRequest)
+        try? contactStore.execute(saveRequest)
         
         loadContacts()
     }
     
-    func deleteContact() {
-        let predicate = CNContact.predicateForContacts(matchingName: "John")
+    func deleteContact(phone: String) {
+        let predicate = CNContact.predicateForContacts(matching: CNPhoneNumber(stringValue: phone))
         let toFetch = [CNContactEmailAddressesKey]
-
-        do{
-          let contacts = try store.unifiedContactsMatchingPredicate(predicate,keysToFetch: toFetch)
-          guard contacts.count > 0 else{
-            print("No contacts found")
-            return
-          }
-
-          guard let contact = contacts.first else{
-
-        return
-          }
-
-          let req = CNSaveRequest()
-          let mutableContact = contact.mutableCopy() as! CNMutableContact
-          req.deleteContact(mutableContact)
-
-          do{
-            try store.executeSaveRequest(req)
-            print("Success, You deleted the user")
-          } catch let e{
-            print("Error = \(e)")
-          }
+        
+        do {
+            let contacts = try contactStore.unifiedContacts(matching: predicate,keysToFetch: toFetch as [CNKeyDescriptor])
+            guard contacts.count > 0 else{
+                print("No contacts found")
+                return
+            }
+            
+            guard let contact = contacts.first else {
+                return
+            }
+            
+            let req = CNSaveRequest()
+            let mutableContact = contact.mutableCopy() as! CNMutableContact
+            req.delete(mutableContact)
+            
+            do {
+                try contactStore.execute(req)
+                print("Success, You deleted the user")
+                loadContacts()
+            } catch let e{
+                print("Error = \(e)")
+            }
         } catch let err{
-           print(err)
+            print(err)
         }
     }
     
-    func setFilter(filter: [MobileOperator]) {
-        operatorFilter = filter
+    func setFilter(filter: Set<OperatorFilter>) {
+        operatorFilters = filter
         loadContacts()
+    }
+    
+    func getFilters() -> Set<OperatorFilter> {
+        return operatorFilters
     }
     
     // MARK: - Private methods
@@ -105,17 +103,22 @@ final class ContactsPresenter: ContactsPresenterProtocol {
             contacts = [ContactItem]()
             let keyToFetch = [CNContactFormatter.descriptorForRequiredKeys(for: .fullName), CNContactPhoneNumbersKey as CNKeyDescriptor]
             let request = CNContactFetchRequest(keysToFetch: keyToFetch)
+            let isAllInFilter = operatorFilters.contains(.all)
             try contactStore.enumerateContacts(with: request, usingBlock: { cnContact, error in
                 if cnContact.isKeyAvailable(CNContactPhoneNumbersKey) {
                     let name = CNContactFormatter.string(from: cnContact, style: .fullName) ?? ""
                     let phone = (cnContact.phoneNumbers[0].value).value(forKey: "digits") as? String ?? ""
                     let mobileOperator = self.getOperator(phone: phone)
-                    if self.operatorFilter.contains(mobileOperator) {
+                    if isAllInFilter || self.operatorFilters.contains(.operators(mobileOperator)) {
                         self.contacts.append(ContactItem(name: name, phone: phone, mobileOperator: mobileOperator))
                     }
                 }
             })
-            view.showContactsList(contacts: contacts)
+            if contacts.isEmpty {
+                view.showEmptyView(message: "There is no Contacts")
+            } else {
+                view.showContactsList(contacts: contacts)
+            }
         }
         catch {
             view.showEmptyView(message: "Error getting Contacts data")
@@ -124,13 +127,14 @@ final class ContactsPresenter: ContactsPresenterProtocol {
     
     private func getOperator(phone: String) -> MobileOperator {
         let phonePrefix = phone.prefix(2)
-        if phonePrefix == "50" || phonePrefix == "93"  {
+        
+        if phone.prefix(3) == "918" || phonePrefix == "98"  {
+            return MobileOperator.babilon
+        } else if phonePrefix == "50" || phonePrefix == "93"  {
             return MobileOperator.tcell
         } else if phonePrefix == "91"  {
             return MobileOperator.zetMobile
-        } else if phone.prefix(3) == "918" || phonePrefix == "98"  {
-            return MobileOperator.babilon
-        } else if phonePrefix == "55" || phonePrefix == "90"  {
+        }  else if phonePrefix == "55" || phonePrefix == "90"  {
             return MobileOperator.megafone
         }
         return MobileOperator.unknown

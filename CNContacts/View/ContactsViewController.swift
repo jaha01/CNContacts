@@ -14,8 +14,10 @@ protocol ContactsViewControllerProtocol: AnyObject {
  func addContact(surname: String, name: String, phone: String)
 }
 
-final class ContactsViewController: UIViewController, ContactsViewControllerProtocol {
+final class ContactsViewController: UIViewController, ContactsViewControllerProtocol, ContactsFilterDelegate {
 
+    // MARK: - Public properties
+    
     var presenter: ContactsPresenterProtocol!
     
     
@@ -56,7 +58,6 @@ final class ContactsViewController: UIViewController, ContactsViewControllerProt
             self.errorLabel.isHidden = true
             self.contactsList.reloadData()
         }
-        
     }
     
     func showEmptyView(message: String) {
@@ -72,11 +73,12 @@ final class ContactsViewController: UIViewController, ContactsViewControllerProt
         presenter.addContact(surname: surname, name: name, phone: phone)
     }
     
-    func setFilter(filter: [MobileOperator]) {
+    func applyFilters(filter: Set<OperatorFilter>) {
         presenter.setFilter(filter: filter)
     }
     
     // MARK: - Private methods
+    
     private func setupUI() {
         view.addSubview(contactsList)
         view.addSubview(errorLabel)
@@ -88,14 +90,14 @@ final class ContactsViewController: UIViewController, ContactsViewControllerProt
     }
     
     @objc private func didTapAdd() {
-        buildBottomSheet(for: ContactsAddViewController(delegate: self))
+        showBottomSheet(for: ContactsAddViewController(delegate: self))
     }
 
     @objc private func didTapFilter() {
-        buildBottomSheet(for: ContactsFilterViewController(delegate: self))
+        showBottomSheet(for: ContactsFilterViewController(activeFilters: presenter.getFilters(), delegate: self))
     }
     
-    private func buildBottomSheet(for controller: UIViewController) {
+    private func showBottomSheet(for controller: UIViewController) {
         let nav = UINavigationController(rootViewController: controller)
         nav.navigationBar.backgroundColor = .white
         if let sheet = nav.sheetPresentationController {
@@ -108,7 +110,6 @@ final class ContactsViewController: UIViewController, ContactsViewControllerProt
     }
     
     private func setConstraints() {
-        
         NSLayoutConstraint.activate([
             contactsList.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             contactsList.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
@@ -116,15 +117,13 @@ final class ContactsViewController: UIViewController, ContactsViewControllerProt
             contactsList.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
             errorLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             errorLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor)
-
         ])
     }
-
 }
 
 
+
 extension ContactsViewController: UITableViewDelegate, UITableViewDataSource {
-    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return contacts.count
     }
@@ -141,8 +140,7 @@ extension ContactsViewController: UITableViewDelegate, UITableViewDataSource {
     
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
-            presenter.deleteContact()
-            
+            presenter.deleteContact(phone: contacts[indexPath.row].phone)            
         }
     }
 }

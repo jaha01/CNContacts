@@ -8,7 +8,7 @@
 import Foundation
 
 struct ContactItem {
-    var name: String
-    var phone: String
-    var mobileOperator: MobileOperator
+    let name: String
+    let phone: String
+    let mobileOperator: MobileOperator
 }

@@ -14,8 +14,3 @@ enum MobileOperator {
     case megafone
     case unknown
 }
-
-enum OperatorFilter {
-    case all
-    case operators(MobileOperator)
-}
